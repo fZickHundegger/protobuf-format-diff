@@ -27,7 +27,7 @@ The program takes 5 arguments:
 - dir1: A directory containing .proto files
 - file1.proto: The relative path of a .proto file in dir1
 - dir2 and file2.proto: The same as above for another version to compare.
-- type-name: The name of a message or enum defined in file1.proto and file2.proto
+- type-name: Use '.' to compare all messages and enums. Giving the name of a specifif type doesn't work
 
 You can add the following options:
 
