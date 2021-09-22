@@ -1,20 +1,18 @@
 This tool allows you to compare versions of a Protocol Buffer specification
-(entire .proto files or specific message and enum type).
 The purpose is to see clearly whether the newer version maintains backwards compatibility and what new features it adds.
 
 ## Building
 
 ### Linux
 Install the protobuf and protoc library:
- - sudo apt install libprotobuf-dev
- - sudo apt install libprotoc-dev
+ - ```sudo apt install libprotobuf-dev```
+ - ```sudo apt install libprotoc-dev```
 
 IMPORTANT:
 You also need to link the pthread library. This can be done in two different ways:
-1) Using cMake: Update the CMakeList.txt with this line
-    target_link_libraries(protobuf-spec-compare protoc protobuf pthread)
-2) Using g++: Use this expression for compiling:
-    g++ -o proto comparison.cpp main.cpp -l protobuf -l protoc -l pthread
+1) Using cMake: Update the CMakeList.txt with this line: 
+   ```target_link_libraries(protobuf-spec-compare protoc protobuf pthread)```
+2) Using g++: Use this expression for compiling: ```g++ -o proto comparison.cpp main.cpp -l protobuf -l protoc -l pthread```
     
 ### Windows
 
@@ -24,10 +22,10 @@ Prerequisites:
 - make
 - C++ compiler
 - Protocol Buffer libraries
+----
 
 - If you don't have the required librarys and want to build everything on your own:
-    1) You need to build the protoc and protbuf library.
-        For that, download them and follow the instructions in their readme.
+    1) You need to build the protoc and protbuf library. For that, download them and follow the instructions in their readme.
     2) Use cmake to generate the solution of the project.
     3) Add the builded libraries to the projekt dependencies.
     4) Press "Build" in Visual Studio.
@@ -36,10 +34,10 @@ Prerequisites:
 
 - If you already have the builded library at the right place, the original instruction of the developer might work:
     Steps:
-        mkdir build
-        cd build
-        cmake ..
-        make
+        ```mkdir build```
+        ```cd build```
+        ```cmake ..```
+        ```make```
 
 ## Usage
 
