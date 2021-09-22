@@ -4,6 +4,20 @@ The purpose is to see clearly whether the newer version maintains backwards comp
 
 ## Building
 
+### Linux
+Install the protobuf and protoc library:
+ - sudo apt install libprotobuf-dev
+ - sudo apt install libprotoc-dev
+
+IMPORTANT:
+You also need to link the pthread library. This can be done in two different ways:
+1) Using cMake: Update the CMakeList.txt with this line
+    target_link_libraries(protobuf-spec-compare protoc protobuf pthread)
+2) Using g++: Use this expression for compiling:
+    g++ -o proto comparison.cpp main.cpp -l protobuf -l protoc -l pthread
+    
+### Windows
+
 Prerequisites:
 
 - CMake
@@ -11,12 +25,21 @@ Prerequisites:
 - C++ compiler
 - Protocol Buffer libraries
 
-Steps:
+- If you don't have the required librarys and want to build everything on your own:
+    1) You need to build the protoc and protbuf library.
+        For that, download them and follow the instructions in their readme.
+    2) Use cmake to generate the solution of the project.
+    3) Add the builded libraries to the projekt dependencies.
+    4) Press "Build" in Visual Studio.
 
-    mkdir build
-    cd build
-    cmake ..
-    make
+- If you just want to use the compiled .exe, use the release on github. You don't have to install anything else 
+
+- If you already have the builded library at the right place, the original instruction of the developer might work:
+    Steps:
+        mkdir build
+        cd build
+        cmake ..
+        make
 
 ## Usage
 
