@@ -1,5 +1,7 @@
 #include "comparison.h"
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <string>
 
@@ -58,6 +60,30 @@ string Comparison::Item::message() const
         break;
     case Name_Missing:
         msg = "Name missing";
+        break;
+    case Optional_Message_Field_Added:
+        msg = "Optional_Field_added";
+        break;
+    case Optional_Message_Field_Removed:
+        msg = "Optional_Field_removed";
+        break;
+    case File_Service_Added:
+        msg = "File Service Added";
+        break;
+    case File_Service_Removed:
+        msg = "File Service Removed";
+        break;
+    case Optional_InputMessage_Field_Added:
+        msg = "Optional_InputField_added";
+        break;
+    case Optional_InputMessage_Field_Removed:
+        msg = "Optional_InputField_removed";
+        break;
+    case Optional_OutputMessage_Field_Added:
+        msg = "Optional_OutputField_added";
+        break;
+    case Optional_OutputMessage_Field_Removed:
+        msg = "Optional_OutputField_removed";
         break;
     default:
         msg = "?";
@@ -293,7 +319,9 @@ Comparison::Section Comparison::compare(const FieldDescriptor * field1, const Fi
         auto * msg1 = field1->message_type();
         auto * msg2 = field2->message_type();
 
-        auto * type_comparison = compare(msg1, msg2);
+        const MessageType msg1type = getMessageType(msg1->full_name());
+        const MessageType msg2type = getMessageType(msg2->full_name());
+        auto * type_comparison = compare(msg1, msg1type, msg2, msg2type);
         type_comparison->notes.push_back("Required by " + field1->full_name() + " -> " + field2->full_name());
 
         type_comparison->trim();
@@ -314,7 +342,7 @@ Comparison::Section Comparison::compare(const FieldDescriptor * field1, const Fi
     return section;
 }
 
-Comparison::Section * Comparison::compare(const Descriptor * desc1, const Descriptor * desc2)
+Comparison::Section * Comparison::compare(const Descriptor * desc1, Comparison::MessageType desc1type, const Descriptor * desc2, Comparison::MessageType desc2type)
 {
     string key = desc1->full_name() + ":" + desc2->full_name();
     if (compared.count(key))
@@ -338,7 +366,25 @@ Comparison::Section * Comparison::compare(const Descriptor * desc1, const Descri
         else
         {
             string field1_id = options.binary ? to_string(field1->number()) : field1->name();
-            section.add_item(Message_Field_Removed, field1_id, "");
+            if(field1->has_optional_keyword())
+            {
+	            switch (desc1type)
+	            {
+                case Comparison::InputMessage:
+                    section.add_item(Optional_InputMessage_Field_Removed, field1_id, "");
+                    break;
+                case Comparison::OutputMessage:
+                    section.add_item(Optional_OutputMessage_Field_Removed, field1_id, "");
+                    break;
+                case Comparison::Undefined:
+                    section.add_item(Optional_Message_Field_Removed, field1_id, "");
+                    break;
+	            }
+            }else
+            {
+                section.add_item(Message_Field_Removed, field1_id, "");
+            }
+            
         }
     }
 
@@ -352,7 +398,25 @@ Comparison::Section * Comparison::compare(const Descriptor * desc1, const Descri
         if (!field1)
         {
             string field2_id = options.binary ? to_string(field2->number()) : field2->name();
-            section.add_item(Message_Field_Added, "", field2_id);
+            if(field2->has_optional_keyword())
+            {
+                switch (desc1type)
+                {
+                case Comparison::InputMessage:
+                    section.add_item(Optional_InputMessage_Field_Added, field2_id, "");
+                    break;
+                case Comparison::OutputMessage:
+                    section.add_item(Optional_OutputMessage_Field_Added, field2_id, "");
+                    break;
+                case Comparison::Undefined:
+                    section.add_item(Optional_Message_Field_Added, field2_id, "");
+                    break;
+                }
+            }
+            else
+            {
+                section.add_item(Message_Field_Added, "", field2_id);
+            }
         }
     }
 
@@ -364,13 +428,68 @@ void Comparison::compare(Source & source1, Source & source2)
     auto * file1 = source1.file_descriptor();
     auto * file2 = source2.file_descriptor();
 
+    
+    for (int i = 0; i < file1->service_count(); ++i)
+    {
+        auto* service1 = file1->service(i);
+        auto* service2 = file2->FindServiceByName(service1->name());
+        if (! service2)
+        {
+            root.add_item(File_Service_Removed, service1->full_name(), "");
+        }
+
+        //Die Input und Output messages der Methoden werden gesucht
+        for (int x = 0; x < service1->method_count(); ++x)
+        {
+            auto* method1 = service1->method(x);
+            this->inputMessages.push_back(method1->input_type()->full_name());
+            this->outputMessages.push_back(method1->output_type()->full_name());
+        }
+    }
+
+    for (int i = 0; i < file2->service_count(); ++i)
+    {
+        auto* service2 = file2->service(i);
+        auto* service1 = file1->FindServiceByName(service2->name());
+        if (!service1)
+        {
+            root.add_item(File_Service_Added, service2->full_name(), "");
+        }
+
+        //Die Input und Output messages der Methoden werden gesucht
+        for (int x = 0; x < service2->method_count(); ++x)
+        {
+            auto* method2 = service2->method(x);
+            this->inputMessages.push_back(method2->input_type()->full_name());
+            this->outputMessages.push_back(method2->output_type()->full_name());
+        }
+
+        this->inputMessages.unique();
+        this->outputMessages.unique();
+        
+    }
+
+    for (int i = 0; i < file2->message_type_count(); ++i)
+    {
+        auto* msg2 = file2->message_type(i);
+        auto* msg1 = file1->FindMessageTypeByName(msg2->name());
+        if (!msg1)
+        {
+            root.add_item(File_Message_Added, "", msg2->full_name());
+        }
+    }
+
     for (int i = 0; i < file1->message_type_count(); ++i)
     {
         auto * msg1 = file1->message_type(i);
         auto * msg2 = file2->FindMessageTypeByName(msg1->name());
         if (msg2)
         {
-            compare(msg1, msg2);
+            //Get Message type of msg1 and msg2
+            const MessageType msg1type = getMessageType(msg1->full_name());
+            const MessageType msg2type = getMessageType(msg2->full_name());
+
+            compare(msg1, msg1type, msg2, msg2type);
         }
         else
         {
@@ -413,7 +532,6 @@ void Comparison::compare(Source & source1, Source & source2)
     }
 }
 
-
 void Comparison::compare(Source & source1, const string & name1, Source & source2, const string &name2)
 {
     auto desc1 = source1.pool()->FindMessageTypeByName(name1);
@@ -422,11 +540,13 @@ void Comparison::compare(Source & source1, const string & name1, Source & source
     auto enum1 = source1.pool()->FindEnumTypeByName(name1);
     auto enum2 = source2.pool()->FindEnumTypeByName(name2);
 
-    if (desc1 and desc2)
+    if (desc1 && desc2)
     {
-        compare(desc1, desc2);
+        MessageType desc1type = getMessageType(desc1->full_name());
+        MessageType desc2type = getMessageType(desc2->full_name());
+        compare(desc1, desc1type, desc2, desc2type);
     }
-    else if (enum1 and enum2)
+    else if (enum1 && enum2)
     {
         compare(enum1, enum2);
     }
@@ -436,3 +556,37 @@ void Comparison::compare(Source & source1, const string & name1, Source & source
     }
 }
 
+void Comparison::print_lists()
+{
+    //For Debug
+    cout << "Input  Messages: " << endl;
+
+    for(auto message : this->inputMessages)
+    {
+        cout << message << endl;
+    }
+
+    cout << "Output  Messages: " << endl;
+
+    for (auto message : this->outputMessages)
+    {
+        cout << message << endl;
+    }
+}
+
+Comparison::MessageType Comparison::getMessageType(const string messageName) const
+{
+	if(find(inputMessages.begin(), inputMessages.end(), messageName) != inputMessages.end())
+	{
+        if (find(outputMessages.begin(), outputMessages.end(), messageName) != outputMessages.end())
+        {
+            return Comparison::Undefined;
+        }else
+        {
+            return Comparison::InputMessage;
+        }
+	}else
+	{
+        return Comparison::OutputMessage;
+	}
+}

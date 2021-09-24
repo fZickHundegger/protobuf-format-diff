@@ -61,6 +61,9 @@ public:
     const FileDescriptor * file_descriptor() const { return d_file_descriptor; }
     const DescriptorPool * pool() const { return importer->pool(); }
 
+    list<string> * requestMessages;
+    list<string> * responseMessages;
+
 private:
     DiskSourceTree source_tree;
     ErrorCollector error_collector;
@@ -88,7 +91,15 @@ public:
         File_Message_Removed,
         File_Enum_Added,
         File_Enum_Removed,
-        Name_Missing
+        Name_Missing,
+        Optional_Message_Field_Added,
+        Optional_Message_Field_Removed,
+        File_Service_Added,
+        File_Service_Removed,
+        Optional_OutputMessage_Field_Added,
+        Optional_OutputMessage_Field_Removed,
+        Optional_InputMessage_Field_Added,
+        Optional_InputMessage_Field_Removed
     };
 
     struct Item
@@ -134,7 +145,7 @@ public:
             items.emplace_back(t, a, b);
         }
 
-        bool is_empty() const { return subsections.empty() and items.empty(); }
+        bool is_empty() const { return subsections.empty() && items.empty(); }
 
         void trim()
         {
@@ -160,19 +171,32 @@ public:
         bool binary = false;
     };
 
+    enum MessageType
+    {
+	    InputMessage,
+        OutputMessage,
+        Undefined
+    };
+
     Comparison(const Options & options = Options{});
 
     void compare(Source & source1, Source & source2);
     void compare(Source & source1, const string & name1, Source & source2, const string &name2);
     Section * compare(const EnumDescriptor * enum1, const EnumDescriptor * enum2);
-    Section * compare(const Descriptor * desc1, const Descriptor * desc2);
+    Section * compare(const Descriptor * desc1, MessageType desc1type, const Descriptor * desc2, MessageType desc2type);
     Section compare(const FieldDescriptor * field1, const FieldDescriptor * field2);
     bool compare_default_value(const FieldDescriptor * field1, const FieldDescriptor * field2);
+
+    void print_lists();
 
     Section root { Root_Section, "", "" };
 
     unordered_map<string, Section*> compared;
 
 private:
+    MessageType getMessageType(const string messageName) const;
     Options options;
+    list<string> inputMessages;
+    list<string> outputMessages;
+
 };
