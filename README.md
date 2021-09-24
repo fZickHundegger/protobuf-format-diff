@@ -70,6 +70,9 @@ Any changes in matching fields are reported.
 
 If two matching fields both have an enum or message type, then those enums and message types are also compared.
 
+The tool differences between fields with or without optional keyword.
+For the optional fields, the tool differences, wether a optional field was added to a request or response message.
+
 ### Enum comparison
 
 Enum values are matched by name (a binary comparison mode will be added where values are matched by ID number).
